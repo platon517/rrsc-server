@@ -27,36 +27,49 @@ wss.on("connection", ws => {
 
   ws.on("message", message => {
     const parsedMessage = JSON.parse(message);
-    switch (parsedMessage.type) {
-      case "sendOffer":
-        console.log(1);
-        return [...users]
-          .find(item => item.id === parseFloat(parsedMessage.data.userId))
-          .ws.send(
-            JSON.stringify({ type: "getOffer", data: parsedMessage.data.offer })
-          );
-      case "sendAnswer":
-        console.log(2);
-        return [...users]
-          .find(item => item.id === parseFloat(parsedMessage.data.userId))
-          .ws.send(
-            JSON.stringify({
-              type: "getAnswer",
-              data: parsedMessage.data.answer
-            })
-          );
-      case "setCandidate":
-        console.log(3);
-        return [...users]
-          .find(item => item.id === parseFloat(parsedMessage.data.userId))
-          .ws.send(
-            JSON.stringify({
-              type: "getCandidate",
-              data: parsedMessage.data.candidate
-            })
-          );
-      default:
-        return false;
+    try {
+      switch (parsedMessage.type) {
+        case "sendOffer":
+          console.log('sendOffer userId: ', parsedMessage.data.userId);
+          return [...users]
+            .find(item => item.id === parseFloat(parsedMessage.data.userId))
+            .ws.send(
+              JSON.stringify({ type: "getOffer", data: parsedMessage.data.offer })
+            );
+        case "sendAnswer":
+          console.log('sendAnswer userId: ', parsedMessage.data.userId);
+          return [...users]
+            .find(item => item.id === parseFloat(parsedMessage.data.userId))
+            .ws.send(
+              JSON.stringify({
+                type: "getAnswer",
+                data: parsedMessage.data.answer
+              })
+            );
+        case "setCandidate":
+          console.log('setCandidate userId: ', parsedMessage.data.userId);
+          return [...users]
+            .find(item => item.id === parseFloat(parsedMessage.data.userId))
+            .ws.send(
+              JSON.stringify({
+                type: "getCandidate",
+                data: parsedMessage.data.candidate
+              })
+            );
+        case "disconnectFromStream":
+          console.log('disconnectFromStream userId: ', parsedMessage.data.userId);
+          return [...users]
+            .find(item => item.id === parseFloat(parsedMessage.data.userId))
+            .ws.send(
+              JSON.stringify({
+                type: "disconnectedFromStream"
+              })
+            );
+        default:
+          return false;
+      }
+    } catch (e) {
+      console.log(e);
     }
   });
 
