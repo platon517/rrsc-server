@@ -1,27 +1,25 @@
-const express = require('express');
+const express = require("express");
 
 const PORT = process.env.PORT || 3000;
-const INDEX = '/index.html';
+const INDEX = "/index.html";
 
 const server = express()
   .use((req, res) => res.sendFile(INDEX, { root: __dirname }))
   .listen(PORT, () => console.log(`Listening on ${PORT}`));
 
-
 const WebSocket = require("ws");
 
 const wss = new WebSocket.Server({ server });
 
-const users = new Set();
+const users = new Map();
+let lastId = 0;
 
 wss.on("connection", ws => {
-  const user = {
-    id: users.size > 0 ? ([...users].pop().id + 1) : 0,
-    ws
-  };
-  users.add(user);
+  const id = lastId + 1;
+  lastId = id;
+  users.set(id, ws);
 
-  ws.send(JSON.stringify({ type: "wsIdSet", data: { id: user.id } }));
+  ws.send(JSON.stringify({ type: "wsIdSet", data: { id } }));
 
   console.log("users: ", users.size);
 
@@ -29,42 +27,49 @@ wss.on("connection", ws => {
     const parsedMessage = JSON.parse(message);
     try {
       switch (parsedMessage.type) {
+        case "callForStream":
+          console.log("callForStream userId: ", parsedMessage.data.userId);
+          return users
+            .get(parseFloat(parsedMessage.data.userId))
+            .send(
+              JSON.stringify({ type: "calledToStream", data: id })
+            );
         case "sendOffer":
-          console.log('sendOffer userId: ', parsedMessage.data.userId);
-          return [...users]
-            .find(item => item.id === parseFloat(parsedMessage.data.userId))
-            .ws.send(
-              JSON.stringify({ type: "getOffer", data: parsedMessage.data.offer })
+          console.log("sendOffer userId: ", parsedMessage.data.userId);
+          return users
+            .get(parseFloat(parsedMessage.data.userId))
+            .send(
+              JSON.stringify({
+                type: "getOffer",
+                data: parsedMessage.data.offer
+              })
             );
         case "sendAnswer":
-          console.log('sendAnswer userId: ', parsedMessage.data.userId);
-          return [...users]
-            .find(item => item.id === parseFloat(parsedMessage.data.userId))
-            .ws.send(
-              JSON.stringify({
-                type: "getAnswer",
-                data: parsedMessage.data.answer
-              })
-            );
+          console.log("sendAnswer userId: ", parsedMessage.data.userId);
+          return users.get(parseFloat(parsedMessage.data.userId)).send(
+            JSON.stringify({
+              type: "getAnswer",
+              data: parsedMessage.data.answer
+            })
+          );
         case "setCandidate":
-          console.log('setCandidate userId: ', parsedMessage.data.userId);
-          return [...users]
-            .find(item => item.id === parseFloat(parsedMessage.data.userId))
-            .ws.send(
-              JSON.stringify({
-                type: "getCandidate",
-                data: parsedMessage.data.candidate
-              })
-            );
+          console.log("setCandidate userId: ", parsedMessage.data.userId);
+          return users.get(parseFloat(parsedMessage.data.userId)).send(
+            JSON.stringify({
+              type: "getCandidate",
+              data: parsedMessage.data.candidate
+            })
+          );
         case "disconnectFromStream":
-          console.log('disconnectFromStream userId: ', parsedMessage.data.userId);
-          return [...users]
-            .find(item => item.id === parseFloat(parsedMessage.data.userId))
-            .ws.send(
-              JSON.stringify({
-                type: "disconnectedFromStream"
-              })
-            );
+          console.log(
+            "disconnectFromStream userId: ",
+            parsedMessage.data.userId
+          );
+          return users.get(parseFloat(parsedMessage.data.userId)).send(
+            JSON.stringify({
+              type: "disconnectedFromStream"
+            })
+          );
         default:
           return false;
       }
@@ -74,6 +79,6 @@ wss.on("connection", ws => {
   });
 
   ws.on("close", () => {
-    users.delete(user);
+    users.delete(id);
   });
 });
