@@ -12,7 +12,7 @@ const WebSocket = require("ws");
 const wss = new WebSocket.Server({ server });
 
 const users = new Map();
-let lastId = 0;
+let lastId = 1;
 
 wss.on("connection", ws => {
   const id = lastId + 1;
